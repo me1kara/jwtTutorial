@@ -27,13 +27,17 @@ public class TokenProvider implements InitializingBean {
     private static final String AUTHORITIES_KEY = "auth";
     private final String secret;
     private final long tokenValidityInMilliseconds;
+    private final long refreshTokenValidityMilliseconds;
+
     private Key key;
 
     public TokenProvider(
             @Value("${jwt.secret}") String secret,
-            @Value("${jwt.token-validity-in-seconds}") long tokenValidityInSeconds) {
+            @Value("${jwt.token-validity-in-seconds}") long tokenValidityInSeconds,
+            @Value("${jwt.refresh-token-validity-in-seconds}") long refreshTokenValidityMilliseconds) {
         this.secret = secret;
         this.tokenValidityInMilliseconds = tokenValidityInSeconds * 1000;
+        this.refreshTokenValidityMilliseconds = refreshTokenValidityMilliseconds * 1000;
     }
 
     @Override
@@ -45,7 +49,6 @@ public class TokenProvider implements InitializingBean {
 
     //토큰생성
     public String createToken(Authentication authentication) {
-
         //권한조회
         String authorities = authentication.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
@@ -57,10 +60,22 @@ public class TokenProvider implements InitializingBean {
 
         //jwt 생성, 공개클라임(auth)과 비공개클라임(권한) 시그네쳐 생성방식, 유효시간 등을 지정.
         return Jwts.builder()
+                //이름
                 .setSubject(authentication.getName())
+                //case 2 : .claim("username", authentication.getName()
                 .claim(AUTHORITIES_KEY, authorities)
                 .signWith(key, SignatureAlgorithm.HS512)
                 .setExpiration(validity)
+                .compact();
+    }
+
+    public String createRefreshToken() {
+        Date now = new Date();
+        Date validity = new Date(now.getTime() + refreshTokenValidityMilliseconds);
+        return Jwts.builder()
+                .setIssuedAt(now)
+                .setExpiration(validity)
+                .signWith(key, SignatureAlgorithm.HS512)
                 .compact();
     }
 
@@ -99,4 +114,7 @@ public class TokenProvider implements InitializingBean {
         }
         return false;
     }
+
+
+
 }

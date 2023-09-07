@@ -24,6 +24,11 @@ public class UserService {
     }
 
     @Transactional
+    public UserDTO findById(Long id){
+        return UserDTO.from(userRepository.findById(id).orElseThrow(()->new NotFoundMemberException("Member not found")));
+    }
+
+    @Transactional
     public UserDTO signup(UserDTO
                                       userDto) {
         if (userRepository.findOneWithAuthoritiesByUsername(userDto.getUsername()).orElse(null) != null) {
@@ -58,4 +63,6 @@ public class UserService {
                         .orElseThrow(() -> new NotFoundMemberException("Member not found"))
         );
     }
+
+
 }

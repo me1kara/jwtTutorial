@@ -1,5 +1,6 @@
 package com.han.jwtTuto.repository;
 
+import com.han.jwtTuto.dto.UserDTO;
 import org.springframework.data.jpa.repository.EntityGraph;
 import org.springframework.data.jpa.repository.JpaRepository;
 import com.han.jwtTuto.entity.User;

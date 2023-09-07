@@ -57,10 +57,11 @@ public class SecurityConfig {
                 )
                 //인증 요구 경로 지정
                 .authorizeHttpRequests(authorizeHttpRequests -> authorizeHttpRequests
-                        .requestMatchers(new AntPathRequestMatcher("/api/**")).permitAll()
+                        .requestMatchers(new AntPathRequestMatcher("/api/**"),new AntPathRequestMatcher("/")).permitAll()
                         .requestMatchers(PathRequest.toH2Console()).permitAll()
                         .anyRequest().authenticated()
                 )
+                .formLogin(loginHandling -> loginHandling.loginPage("/login").loginProcessingUrl("/login"))
 
                 // 세션을 사용하지 않기 때문에 STATELESS로 설정
                 .sessionManagement(sessionManagement ->
