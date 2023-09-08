@@ -4,6 +4,8 @@ package com.han.jwtTuto.controller;
 import com.han.jwtTuto.dto.LoginDTO;
 import com.han.jwtTuto.dto.TokenDTO;
 import com.han.jwtTuto.dto.UserDTO;
+import com.han.jwtTuto.entity.RefreshToken;
+import com.han.jwtTuto.entity.User;
 import com.han.jwtTuto.jwt.JwtFilter;
 import com.han.jwtTuto.jwt.TokenProvider;
 import com.han.jwtTuto.service.TokenService;
@@ -57,7 +59,9 @@ public class AuthController {
         String jwt = tokenProvider.createToken(authentication);
         String refreshToken = tokenProvider.createRefreshToken();
 
-        tokenService.saveToken(refreshToken,authentication.getName());
+        User user = userService.getUser(authentication.getName());
+
+        tokenService.saveToken(refreshToken,user);
 
         //유저에게 전달
         HttpHeaders httpHeaders = new HttpHeaders();
@@ -67,30 +71,33 @@ public class AuthController {
         return new ResponseEntity<>(new TokenDTO(jwt), httpHeaders, HttpStatus.OK);
     }
 
-    @GetMapping("/refresh")
-    public ResponseEntity<Void> refresh(HttpServletRequest request) {
-        validateExistHeader(request);
-        String refreshToken = request.getHeader("Refresh-Token").substring(7);
-
-        //db에 토큰과 매칭되는지 확인, 유효시간 등등
-        String username = tokenService.matches(refreshToken);
-        UserDTO user = userService.getUserWithAuthorities(username);
-
-        //db에 인증목적으로 사용할 객체 생성
-        UsernamePasswordAuthenticationToken authenticationToken =
-                new UsernamePasswordAuthenticationToken(user.getUsername(), user.getPassword());
-
-        //!! userDetailsService 인증 로직 및 시큐리티 콘텍스트에 등록
-        Authentication authentication = authenticationManagerBuilder.getObject().authenticate(authenticationToken);
-        SecurityContextHolder.getContext().setAuthentication(authentication);
-
-        //유저에게 보낼 암호화된 토큰 만듦
-        String accessToken = tokenProvider.createToken(authentication);
-
-        return ResponseEntity.noContent()
-                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
-                .build();
-    }
+    //확인용으로 냅둠
+//    @GetMapping("/refresh")
+//    public ResponseEntity<Void> refresh(HttpServletRequest request) {
+//        validateExistHeader(request);
+//        String refreshJwt = request.getHeader("Refresh-Token").substring(7);
+//
+//        //db에 토큰과 매칭되는지 확인, 유효시간 등등
+//        RefreshToken savedRefreshToken = tokenService.matches(refreshJwt);
+//
+//        //db에 인증목적으로 사용할 객체 생성
+//        UsernamePasswordAuthenticationToken authenticationToken =
+//                new UsernamePasswordAuthenticationToken(savedRefreshToken.getUser().getUsername(), savedRefreshToken.getUser().getPassword());
+//
+//        //!! userDetailsService 인증 로직 및 시큐리티 콘텍스트에 등록
+//        Authentication authentication = authenticationManagerBuilder.getObject().authenticate(authenticationToken);
+//        SecurityContextHolder.getContext().setAuthentication(authentication);
+//
+//        //유저에게 보낼 암호화된 토큰 만듦,
+//        String accessToken = tokenProvider.createToken(authentication);
+//        String refreshToken = tokenProvider.createRefreshToken(savedRefreshToken.getExpiresTime());
+//
+//        tokenService.saveToken(refreshToken,savedRefreshToken.getUser());
+//
+//        return ResponseEntity.noContent()
+//                .header(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken)
+//                .build();
+//    }
 
     private void validateExistHeader(HttpServletRequest request) {
         String authorizationHeader = request.getHeader(HttpHeaders.AUTHORIZATION);

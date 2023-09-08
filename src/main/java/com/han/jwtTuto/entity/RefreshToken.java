@@ -17,13 +17,16 @@ public class RefreshToken {
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "refreshTokenId")
     private Long id;
-    @Column(name = "username", length = 50, unique = true)
-    private String username;
+    @OneToOne
+    @JoinColumn(name="userId")
+    private User user;
     @Column(name = "token")
     private String token;
 
-    public RefreshToken(String refreshToken, String name) {
-        this.username = name;
+    @Column(name ="expiresTime")
+    private Long expiresTime;
+
+    public RefreshToken(String refreshToken, String userId) {
         this.token = refreshToken;
     }
 }

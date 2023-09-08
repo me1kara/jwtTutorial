@@ -7,6 +7,7 @@ import com.han.jwtTuto.entity.User;
 import com.han.jwtTuto.exception.DuplicateMemberException;
 import com.han.jwtTuto.exception.NotFoundMemberException;
 import com.han.jwtTuto.repository.UserRepository;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -53,6 +54,10 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserDTO getUserWithAuthorities(String username) {
         return UserDTO.from(userRepository.findOneWithAuthoritiesByUsername(username).orElse(null));
+    }
+
+    public User getUser(String username) {
+        return userRepository.findOneByUsername(username).orElseThrow(()->new UsernameNotFoundException("name not found"));
     }
 
     @Transactional(readOnly = true)

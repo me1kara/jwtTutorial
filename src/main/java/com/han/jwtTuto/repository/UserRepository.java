@@ -13,4 +13,5 @@ public interface UserRepository extends JpaRepository<User, Long> {
     @EntityGraph(attributePaths = "authorities")
     @Query("select u from User u left join fetch u.authorities where u.username = :username")
     Optional<User> findOneWithAuthoritiesByUsername(@Param("username") String username);
+    Optional<User> findOneByUsername(String username);
 }
