@@ -13,6 +13,7 @@ import com.han.jwtTuto.service.UserService;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -23,6 +24,8 @@ import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 
 @RestController
@@ -31,11 +34,10 @@ import java.util.Objects;
 public class AuthController {
     private final TokenProvider tokenProvider;
     private final AuthenticationManagerBuilder authenticationManagerBuilder;
-
     private final TokenService tokenService;
-
     private final UserService userService;
 
+    @Autowired
     public AuthController(TokenProvider tokenProvider, AuthenticationManagerBuilder authenticationManagerBuilder
     , TokenService tokenService
     , UserService userService) {
@@ -46,7 +48,7 @@ public class AuthController {
     }
 
     @PostMapping("/authenticate")
-    public ResponseEntity<TokenDTO> authorize(@Valid @RequestBody LoginDTO loginDto) {
+    public ResponseEntity<List<TokenDTO>> authorize(@Valid @RequestBody LoginDTO loginDto) {
         //db에 인증목적으로 사용할 객체 생성
         UsernamePasswordAuthenticationToken authenticationToken =
                 new UsernamePasswordAuthenticationToken(loginDto.getUsername(), loginDto.getPassword());
@@ -63,12 +65,19 @@ public class AuthController {
 
         tokenService.saveToken(refreshToken,user);
 
+        System.out.println("DB저장 : " + refreshToken);
+
         //유저에게 전달
         HttpHeaders httpHeaders = new HttpHeaders();
         httpHeaders.add(JwtFilter.AUTHORIZATION_HEADER, "Bearer " + jwt);
         httpHeaders.add("Refresh-Token", "Bearer " + refreshToken);
 
-        return new ResponseEntity<>(new TokenDTO(jwt), httpHeaders, HttpStatus.OK);
+        List<TokenDTO> tList = new ArrayList<>();
+
+        tList.add(new TokenDTO(jwt));
+        tList.add(new TokenDTO(refreshToken));
+
+        return new ResponseEntity<>(tList, httpHeaders, HttpStatus.OK);
     }
 
     //확인용으로 냅둠

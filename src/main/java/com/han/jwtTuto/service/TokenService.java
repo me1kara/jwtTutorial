@@ -5,6 +5,7 @@ import com.han.jwtTuto.entity.RefreshToken;
 import com.han.jwtTuto.entity.User;
 import com.han.jwtTuto.jwt.TokenProvider;
 import com.han.jwtTuto.repository.RefreshTokenRepository;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,22 +21,20 @@ public class TokenService {
     private final long refreshTokenValidityMilliseconds;
 
 
+    @Autowired
     public TokenService(RefreshTokenRepository refreshTokenRepository, TokenProvider tokenProvider, @Value("${jwt.refresh-token-validity-in-seconds}") long refreshTokenValidityMilliseconds) {
         this.refreshTokenRepository = refreshTokenRepository;
         this.tokenProvider = tokenProvider;
         this.refreshTokenValidityMilliseconds = refreshTokenValidityMilliseconds;
     }
     public void saveToken(String refreshToken, User user) {
-        Optional<RefreshToken> pastToken = refreshTokenRepository.findByUserId(user.getUserId());
+        Optional<RefreshToken> pastToken = refreshTokenRepository.findByUserId(user.getId());
         //기존게 있다면 토큰만 재갱신 해준다
         if(pastToken.isPresent()){
             pastToken.get().setToken(refreshToken);
             refreshTokenRepository.save(pastToken.get());
         }else{
-            pastToken.get().setToken(refreshToken);
-            pastToken.get().setUser(user);
-            pastToken.get().setExpiresTime(refreshTokenValidityMilliseconds);
-            refreshTokenRepository.save(pastToken.get());
+            refreshTokenRepository.save(new RefreshToken(refreshToken,user,refreshTokenValidityMilliseconds));
         }
     }
 

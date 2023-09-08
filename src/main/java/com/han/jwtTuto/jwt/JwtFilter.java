@@ -13,6 +13,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.util.StringUtils;
 import org.springframework.web.filter.GenericFilterBean;
 
@@ -29,16 +30,16 @@ public class JwtFilter extends GenericFilterBean {
     public static final String AUTHORIZATION_HEADER = "Authorization";
     private TokenProvider tokenProvider;
 
-    @Autowired
     private AuthenticationManagerBuilder authenticationManagerBuilder;
 
-    @Autowired
     private TokenService tokenService;
 
 
     @Autowired
-    public JwtFilter(TokenProvider tokenProvider) {
+    public JwtFilter(TokenProvider tokenProvider, TokenService tokenService,AuthenticationManagerBuilder authenticationManagerBuilder) {
         this.tokenProvider = tokenProvider;
+        this.tokenService = tokenService;
+        this.authenticationManagerBuilder = authenticationManagerBuilder;
     }
 
     @Override
@@ -58,34 +59,40 @@ public class JwtFilter extends GenericFilterBean {
             logger.debug("Security Context에 '{}' 인증 정보를 저장했습니다, uri: {}", authentication.getName(), requestURI);
         } else {
             //리프레쉬 토큰이 있는지 확인 로직
-            String refreshJwt = ((HttpServletRequest) servletRequest).getHeader("Refresh-Token").substring(7);
-            if(StringUtils.hasText(refreshJwt) && tokenProvider.validateToken(refreshJwt)) {
-                // 리프레시 토큰이 유효하면 새로운 엑세스 토큰 생성
-                //db에 토큰과 매칭되는지 확인, 유효시간 등등
-                RefreshToken savedRefreshToken = tokenService.matches(refreshJwt);
+            String refreshHeader = ((HttpServletRequest) servletRequest).getHeader("Refresh-Token");
 
-                //db에 인증목적으로 사용할 객체 생성
-                UsernamePasswordAuthenticationToken authenticationToken =
-                        new UsernamePasswordAuthenticationToken(savedRefreshToken.getUser().getUsername(), savedRefreshToken.getUser().getPassword());
+            if(refreshHeader !=null ){
+                String refreshJwt = refreshHeader;
+                System.out.println(refreshJwt);
+                if(StringUtils.hasText(refreshJwt) && tokenProvider.validateToken(refreshJwt)) {
+                    // 리프레시 토큰이 유효하면 새로운 엑세스 토큰 생성
+                    //db에 토큰과 매칭되는지 확인, 유효시간 등등
+                    RefreshToken savedRefreshToken = tokenService.matches(refreshJwt);
 
-                //!! userDetailsService 인증 로직 및 시큐리티 콘텍스트에 등록
-                Authentication authentication = authenticationManagerBuilder.getObject().authenticate(authenticationToken);
-                SecurityContextHolder.getContext().setAuthentication(authentication);
+                    //db에 인증목적으로 사용할 객체 생성
+                    UsernamePasswordAuthenticationToken authenticationToken =
+                            new UsernamePasswordAuthenticationToken(savedRefreshToken.getUser().getUsername(), "admin");
 
-                //유저에게 보낼 암호화된 토큰 만듦,
-                String accessToken = tokenProvider.createToken(authentication);
-                String refreshToken = tokenProvider.createRefreshToken(savedRefreshToken.getExpiresTime());
+                    //!! userDetailsService 인증 로직 및 시큐리티 콘텍스트에 등록
+                    Authentication authentication = authenticationManagerBuilder.getObject().authenticate(authenticationToken);
+                    SecurityContextHolder.getContext().setAuthentication(authentication);
 
-                tokenService.saveToken(refreshToken,savedRefreshToken.getUser());
+                    //유저에게 보낼 암호화된 토큰 만듦,
+                    String accessToken = tokenProvider.createToken(authentication);
+                    String refreshToken = tokenProvider.createRefreshToken(savedRefreshToken.getExpiresTime());
 
-                HttpServletResponse httpServletResponse = (HttpServletResponse) servletResponse;
-                httpServletResponse.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken);
-                httpServletResponse.setHeader("Refresh-Token", "Bearer " + refreshToken);
+                    tokenService.saveToken(refreshToken,savedRefreshToken.getUser());
 
-            }else{
-                logger.debug("유효한 JWT 토큰이 없습니다, uri: {}", requestURI);
+                    HttpServletResponse httpServletResponse = (HttpServletResponse) servletResponse;
+                    httpServletResponse.setHeader(HttpHeaders.AUTHORIZATION, "Bearer " + accessToken);
+                    httpServletResponse.setHeader("Refresh-Token", "Bearer " + refreshToken);
 
+                }else{
+                    logger.debug("유효한 JWT 토큰이 없습니다, uri: {}", requestURI);
+
+                }
             }
+
 
         }
         //저장했으니 다음 필터 실행

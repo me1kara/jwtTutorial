@@ -12,6 +12,7 @@ import org.springframework.data.annotation.Reference;
 @Getter
 @Setter
 @Table(name = "refreshToken")
+@NoArgsConstructor
 public class RefreshToken {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
@@ -26,7 +27,10 @@ public class RefreshToken {
     @Column(name ="expiresTime")
     private Long expiresTime;
 
-    public RefreshToken(String refreshToken, String userId) {
+    public RefreshToken(String refreshToken, User user, Long expiresTime) {
+
         this.token = refreshToken;
+        this.user = user;
+        this.expiresTime = expiresTime;
     }
 }

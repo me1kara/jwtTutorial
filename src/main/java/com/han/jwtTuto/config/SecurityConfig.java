@@ -2,10 +2,12 @@ package com.han.jwtTuto.config;
 
 import com.han.jwtTuto.jwt.*;
 
+import com.han.jwtTuto.service.TokenService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.autoconfigure.security.servlet.PathRequest;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.config.annotation.method.configuration.EnableGlobalMethodSecurity;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -23,19 +25,25 @@ public class SecurityConfig {
     private final CorsFilter corsFilter;
     private final JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint;
     private final JwtAccessDeniedHandler jwtAccessDeniedHandler;
+    private final TokenService tokenService;
 
+    private final AuthenticationManagerBuilder authenticationManagerBuilder;
 
     @Autowired
     public SecurityConfig(
             TokenProvider tokenProvider,
             CorsFilter corsFilter,
             JwtAuthenticationEntryPoint jwtAuthenticationEntryPoint,
-            JwtAccessDeniedHandler jwtAccessDeniedHandler
+            JwtAccessDeniedHandler jwtAccessDeniedHandler,
+            TokenService tokenService,
+            AuthenticationManagerBuilder authenticationManagerBuilder
     ) {
         this.tokenProvider = tokenProvider;
         this.corsFilter = corsFilter;
         this.jwtAuthenticationEntryPoint = jwtAuthenticationEntryPoint;
         this.jwtAccessDeniedHandler = jwtAccessDeniedHandler;
+        this.tokenService = tokenService;
+        this.authenticationManagerBuilder = authenticationManagerBuilder;
     }
 
     @Bean
@@ -75,7 +83,7 @@ public class SecurityConfig {
                         )
                 )
                 // 인증방식을 jwt 토큰 방식으로 하곘다는 의미
-                .apply(new JwtSecurityConfig(tokenProvider));
+                .apply(new JwtSecurityConfig(tokenProvider,tokenService, authenticationManagerBuilder));
         return http.build();
     }
 }

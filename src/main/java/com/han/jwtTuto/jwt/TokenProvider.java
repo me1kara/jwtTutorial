@@ -69,6 +69,24 @@ public class TokenProvider implements InitializingBean {
                 .compact();
     }
 
+    public String createTokenForRefresh(com.han.jwtTuto.entity.User user) {
+        //권한조회
+        String authorities = user.getAuthorities().stream().map(authority->authority.getAuthorityName()).collect(Collectors.joining(","));
+        //유효시간
+        long now = (new Date()).getTime();
+        Date validity = new Date(now + this.tokenValidityInMilliseconds);
+
+        //jwt 생성, 공개클라임(auth)과 비공개클라임(권한) 시그네쳐 생성방식, 유효시간 등을 지정.
+        return Jwts.builder()
+                //이름
+                .setSubject(user.getUsername())
+                //case 2 : .claim("username", authentication.getName()
+                .claim(AUTHORITIES_KEY, authorities)
+                .signWith(key, SignatureAlgorithm.HS512)
+                .setExpiration(validity)
+                .compact();
+    }
+
     public String createRefreshToken(Long expiresTime) {
         Date now = new Date();
         Date validity = new Date(expiresTime);
