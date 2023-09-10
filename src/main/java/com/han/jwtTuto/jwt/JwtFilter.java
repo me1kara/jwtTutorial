@@ -9,9 +9,12 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
+import org.springframework.security.authentication.AuthenticationProvider;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.config.annotation.authentication.builders.AuthenticationManagerBuilder;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.util.StringUtils;
@@ -23,6 +26,8 @@ import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import java.io.IOException;
+import java.util.Collection;
+import java.util.stream.Collectors;
 
 public class JwtFilter extends GenericFilterBean {
 
@@ -55,6 +60,7 @@ public class JwtFilter extends GenericFilterBean {
         //토큰검증
         if (StringUtils.hasText(jwt) && tokenProvider.validateToken(jwt)) {
             Authentication authentication = tokenProvider.getAuthentication(jwt);
+
             SecurityContextHolder.getContext().setAuthentication(authentication);
             logger.debug("Security Context에 '{}' 인증 정보를 저장했습니다, uri: {}", authentication.getName(), requestURI);
         } else {
@@ -69,16 +75,15 @@ public class JwtFilter extends GenericFilterBean {
                     //db에 토큰과 매칭되는지 확인, 유효시간 등등
                     RefreshToken savedRefreshToken = tokenService.matches(refreshJwt);
 
+                    Collection<? extends GrantedAuthority> authorities = savedRefreshToken.getUser().getAuthorities().stream().map(authority->new SimpleGrantedAuthority(authority.getAuthorityName())).collect(Collectors.toList());
+
                     //db에 인증목적으로 사용할 객체 생성
                     UsernamePasswordAuthenticationToken authenticationToken =
-                            new UsernamePasswordAuthenticationToken(savedRefreshToken.getUser().getUsername(), "admin");
-
-                    //!! userDetailsService 인증 로직 및 시큐리티 콘텍스트에 등록
-                    Authentication authentication = authenticationManagerBuilder.getObject().authenticate(authenticationToken);
-                    SecurityContextHolder.getContext().setAuthentication(authentication);
+                            new UsernamePasswordAuthenticationToken(savedRefreshToken.getUser().getUsername(),"",authorities);
+                    SecurityContextHolder.getContext().setAuthentication(authenticationToken);
 
                     //유저에게 보낼 암호화된 토큰 만듦,
-                    String accessToken = tokenProvider.createToken(authentication);
+                    String accessToken = tokenProvider.createToken(authenticationToken);
                     String refreshToken = tokenProvider.createRefreshToken(savedRefreshToken.getExpiresTime());
 
                     tokenService.saveToken(refreshToken,savedRefreshToken.getUser());
